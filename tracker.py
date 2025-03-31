@@ -25,6 +25,9 @@ class DoujinshiManagerApp(tk.Tk):
         # Dictionary to store frames
         self.frames = {}
 
+        # Navigation history to track the sequence of screens
+        self.navigation_history = []
+
         # Create all frames, passing cursor and conn to screens that need them
         for F in (MainMenu, DatabaseMenu, DirectoryMenu, DoujinshiMenu, DoujinshiViewScreen, DoujinshiInsertScreen, DoujinshiModifyScreen, AttemptMenu, AttemptViewScreen, AttemptInsertScreen, AttemptModifyScreen, ToolMenu, ToolViewScreen, ToolInsertScreen, ToolModifyScreen):
             # Screens that interact with the database need cursor and conn
@@ -36,17 +39,32 @@ class DoujinshiManagerApp(tk.Tk):
             self.frames[F] = frame
             frame.grid(row=0, column=0, sticky="nsew")
 
+        # Show the MainMenu as the starting screen
         self.show_frame(MainMenu)
 
     def show_frame(self, cont):
+        # Add the current frame to the navigation history (if it's not the same as the last one)
+        if not self.navigation_history or self.navigation_history[-1] != cont:
+            self.navigation_history.append(cont)
+        # Raise the frame to the top
         frame = self.frames[cont]
         frame.tkraise()
 
     def go_back(self):
-        if len(self.frames) > 1:
-            self.show_frame(list(self.frames.keys())[list(self.frames.keys()).index(self.frames[MainMenu]) - 1])
+        # If there's at least one previous screen in the history (excluding the current one)
+        if len(self.navigation_history) > 1:
+            # Remove the current screen from the history
+            self.navigation_history.pop()
+            # Show the previous screen
+            previous_screen = self.navigation_history[-1]
+            self.show_frame(previous_screen)
+        else:
+            # If there's nowhere to go back to, show a message
+            messagebox.showinfo("Info", "You are at the main screen!")
 
     def go_to_main_menu(self):
+        # Clear the navigation history and go to MainMenu
+        self.navigation_history = [MainMenu]
         self.show_frame(MainMenu)
 
     def __del__(self):
@@ -60,6 +78,10 @@ class MainMenu(tk.Frame):
 
         tk.Button(self, text="Manage Database", command=lambda: controller.show_frame(DatabaseMenu)).pack(pady=10)
         tk.Button(self, text="Manage Directories", command=lambda: controller.show_frame(DirectoryMenu)).pack(pady=10)
+        # Disable the Back button since this is the main screen
+        back_button = tk.Button(self, text="Back", command=controller.go_back)
+        back_button.pack(pady=10)
+        back_button.config(state="disabled")  # Disable the button
         tk.Button(self, text="Exit", command=controller.quit).pack(pady=10)
 
 # Database Menu Screen
@@ -127,6 +149,7 @@ class DoujinshiMenu(tk.Frame):
 class DoujinshiViewScreen(tk.Frame):
     def __init__(self, parent, controller, cursor, conn):
         super().__init__(parent)
+        self.controller = controller  # Store controller for navigation
         self.cursor = cursor
         self.conn = conn
         tk.Label(self, text="View Doujinshi", font=("Arial", 14)).pack(pady=10)

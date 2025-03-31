@@ -3,6 +3,7 @@
 This project is a GUI application to manage doujinshi colorization projects, including tracking doujinshi metadata, colorization attempts, and tools used. All functionality is contained in a single `tracker.py` file.
 
 ## Project Structure
+```
 project/
 ├── db/                    # Database folder (contains schema and database)
 │   ├── schema.sql         # SQL script to initialize the database
@@ -11,7 +12,7 @@ project/
 ├── tracker.py             # Main application script with all functionality
 ├── .gitignore
 └── README.md              # This file
-
+```
 ## Setup Instructions
 
 ### 1. Clone the Repository

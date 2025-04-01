@@ -1,7 +1,8 @@
 # doujinshi_manager/screens/attempt_insert.py
 import tkinter as tk
 from tkinter import messagebox
-import sqlite3  # Add sqlite3 import for exception handling
+from tkinter import ttk  # Import ttk for Combobox
+import sqlite3
 
 class AttemptInsertScreen(tk.Frame):
     def __init__(self, parent, controller, cursor, conn):
@@ -43,17 +44,31 @@ class AttemptInsertScreen(tk.Frame):
 
         # Use a grid layout for better alignment
         fields = [
-            ("Code (Doujinshi Code):", "code_entry"),
-            ("Tool ID:", "tool_id_entry"),
-            ("Attempt Folder Path (e.g., deepai):", "attempt_folder_path_entry"),
-            ("Color Status (e.g., partial, complete, failed):", "attempt_color_status_entry"),
-            ("Notes (optional):", "attempt_notes_entry")
+            ("Code (Doujinshi Code):", "code_entry", tk.Entry),
+            # Replace Tool ID entry with a Combobox
+            ("Tool:", "tool_combobox", None),  # We'll create the Combobox separately
+            ("Attempt Folder Path (e.g., deepai):", "attempt_folder_path_entry", tk.Entry),
+            ("Color Status (e.g., partial, complete, failed):", "attempt_color_status_entry", tk.Entry),
+            ("Notes (optional):", "attempt_notes_entry", tk.Entry)
         ]
 
-        for i, (label_text, entry_name) in enumerate(fields):
+        # Dictionary to store tool_id to tool_name mapping
+        self.tool_map = {}
+        self._load_tools()
+
+        for i, (label_text, widget_name, widget_class) in enumerate(fields):
             tk.Label(self.scrollable_frame, text=label_text).grid(row=i, column=0, sticky="w", padx=5, pady=2)
-            setattr(self, entry_name, tk.Entry(self.scrollable_frame, width=40))
-            getattr(self, entry_name).grid(row=i, column=1, sticky="ew", padx=5, pady=2)
+            if widget_name == "tool_combobox":
+                # Create a Combobox for tool selection
+                self.tool_combobox = ttk.Combobox(self.scrollable_frame, values=list(self.tool_map.values()), width=37, state="readonly")
+                self.tool_combobox.grid(row=i, column=1, sticky="ew", padx=5, pady=2)
+                # Set a default value (optional)
+                if self.tool_map:
+                    self.tool_combobox.set(list(self.tool_map.values())[0])
+            else:
+                # Create Entry widgets for other fields
+                setattr(self, widget_name, widget_class(self.scrollable_frame, width=40))
+                getattr(self, widget_name).grid(row=i, column=1, sticky="ew", padx=5, pady=2)
 
         # Configure the grid to expand the entry fields
         self.scrollable_frame.grid_columnconfigure(1, weight=1)
@@ -65,6 +80,16 @@ class AttemptInsertScreen(tk.Frame):
         tk.Button(button_frame, text="Insert", command=self.insert_attempt).pack(side="left", padx=5)
         tk.Button(button_frame, text="Back", command=controller.go_back).pack(side="left", padx=5)
         tk.Button(button_frame, text="Main Menu", command=controller.go_to_main_menu).pack(side="left", padx=5)
+
+    def _load_tools(self):
+        """Load tools from the color_tool table into the tool_map dictionary."""
+        try:
+            self.cursor.execute("SELECT tool_id, tool_name FROM color_tool")
+            tools = self.cursor.fetchall()
+            self.tool_map = {tool_id: f"{tool_id} - {tool_name}" for tool_id, tool_name in tools}
+        except sqlite3.Error as e:
+            messagebox.showerror("Error", f"Failed to load tools: {e}")
+            self.tool_map = {}
 
     def _update_scrollregion(self, event=None):
         self.canvas.configure(scrollregion=self.canvas.bbox("all"))
@@ -80,18 +105,20 @@ class AttemptInsertScreen(tk.Frame):
 
     def insert_attempt(self):
         code = self.code_entry.get()
-        tool_id = self.tool_id_entry.get()
+        # Get the selected tool from the Combobox
+        selected_tool = self.tool_combobox.get()
         attempt_folder_path = self.attempt_folder_path_entry.get()
         attempt_color_status = self.attempt_color_status_entry.get()
         attempt_notes = self.attempt_notes_entry.get()
 
-        if not code or not tool_id or not attempt_folder_path or not attempt_color_status:
-            messagebox.showerror("Error", "Code, Tool ID, Attempt Folder Path, and Color Status are required!")
+        if not code or not selected_tool or not attempt_folder_path or not attempt_color_status:
+            messagebox.showerror("Error", "Code, Tool, Attempt Folder Path, and Color Status are required!")
             return
 
         try:
             code = int(code)
-            tool_id = int(tool_id)
+            # Extract tool_id from the selected tool string (format: "tool_id - tool_name")
+            tool_id = int(selected_tool.split(" - ")[0])
             attempt_notes = attempt_notes if attempt_notes else None
 
             # Check if the doujinshi code exists
@@ -100,7 +127,7 @@ class AttemptInsertScreen(tk.Frame):
                 messagebox.showerror("Error", f"Doujinshi with code {code} does not exist!")
                 return
 
-            # Check if the tool_id exists
+            # Check if the tool_id exists (should always be true since it's from the dropdown)
             self.cursor.execute("SELECT 1 FROM color_tool WHERE tool_id = ?", (tool_id,))
             if not self.cursor.fetchone():
                 messagebox.showerror("Error", f"Tool with ID {tool_id} does not exist!")
@@ -113,6 +140,6 @@ class AttemptInsertScreen(tk.Frame):
             self.conn.commit()
             messagebox.showinfo("Success", f"Added attempt for code {code} with tool ID {tool_id}")
         except ValueError:
-            messagebox.showerror("Error", "Code and Tool ID must be numbers!")
+            messagebox.showerror("Error", "Code must be a number!")
         except sqlite3.Error as e:
             messagebox.showerror("Error", f"Database error: {e}")

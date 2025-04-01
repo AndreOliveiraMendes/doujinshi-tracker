@@ -16,9 +16,9 @@ CREATE TABLE IF NOT EXISTS color_subject (
 
 -- Create the color_tool table
 CREATE TABLE IF NOT EXISTS color_tool (
-    id INTEGER PRIMARY KEY,
-    name TEXT NOT NULL,
-    url TEXT
+    tool_id INTEGER PRIMARY KEY,
+    tool_name TEXT NOT NULL,
+    tool_url TEXT
 );
 
 -- Create the color_attempt table

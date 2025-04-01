@@ -2,3 +2,4 @@ doujinshi_collection/*
 !doujinshi_collection/.gitkeep
 db/tracker.db
 db/tracker.sqbpro
+__pycache__/

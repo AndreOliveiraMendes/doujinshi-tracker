@@ -4,14 +4,35 @@ This project is a GUI application to manage doujinshi colorization projects, inc
 
 ## Project Structure
 ```
-project/
-├── db/                    # Database folder (contains schema and database)
-│   ├── schema.sql         # SQL script to initialize the database
-│   └── tracker.db         # SQLite database (not tracked, create using schema.sql)
-├── doujinshi_collection/  # Folder for doujinshi files (contents not tracked)
-├── tracker.py             # Main application script with all functionality
-├── .gitignore
-└── README.md              # This file
+doujinshi_manager/
+│
+├── db/
+│   ├── tracker.db        # Your existing database file
+│   └── schema.sql        # Your existing schema file
+│
+├── doujinshi_collection/ # Your existing directory for doujinshi folders
+│
+├── screens/              # Directory for all screen classes
+│   ├── __init__.py
+│   ├── main_menu.py
+│   ├── database_menu.py
+│   ├── directory_menu.py
+│   ├── doujinshi_menu.py
+│   ├── doujinshi_view.py
+│   ├── doujinshi_insert.py
+│   ├── doujinshi_modify.py
+│   ├── attempt_menu.py
+│   ├── attempt_view.py
+│   ├── attempt_insert.py
+│   ├── attempt_modify.py
+│   ├── tool_menu.py
+│   ├── tool_view.py
+│   ├── tool_insert.py
+│   └── tool_modify.py
+│
+├── app.py                # Main application class (DoujinshiManagerApp)
+├── database.py           # Database connection and management
+└── main.py               # Entry point to run the app
 ```
 ## Setup Instructions
 

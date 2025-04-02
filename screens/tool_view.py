@@ -1,8 +1,7 @@
 # doujinshi_manager/screens/tool_view.py
 import tkinter as tk
 from tkinter import messagebox, ttk
-import sqlite3  # Add sqlite3 import for exception handling
-from .tool_modify import ToolModifyScreen  # Import ToolModifyScreen
+import sqlite3
 
 class ToolViewScreen(tk.Frame):
     def __init__(self, parent, controller, cursor, conn):
@@ -19,7 +18,7 @@ class ToolViewScreen(tk.Frame):
 
         self.tree.column("Tool ID", width=60)
         self.tree.column("Tool Name", width=150)
-        self.tree.column("Tool URL", width=300)
+        self.tree.column("Tool URL", width=200)
 
         scrollbar = ttk.Scrollbar(self, orient="vertical", command=self.tree.yview)
         self.tree.configure(yscrollcommand=scrollbar.set)
@@ -42,6 +41,7 @@ class ToolViewScreen(tk.Frame):
             self.tree.insert("", "end", values=row)
 
     def edit_selected(self):
+        from .tool_modify import ToolModifyScreen  # Move import here
         selected_item = self.tree.selection()
         if not selected_item:
             messagebox.showerror("Error", "Please select a tool to edit!")
@@ -54,6 +54,8 @@ class ToolViewScreen(tk.Frame):
             self.controller.show_frame(ToolModifyScreen)
 
     def delete_selected(self):
+        from .attempt_insert import AttemptInsertScreen  # Move import here
+        from .attempt_modify import AttemptModifyScreen  # Move import here
         selected_item = self.tree.selection()
         if not selected_item:
             messagebox.showerror("Error", "Please select a tool to delete!")
@@ -62,10 +64,22 @@ class ToolViewScreen(tk.Frame):
         confirm = messagebox.askyesno("Confirm", f"Are you sure you want to delete tool with ID {tool_id}?")
         if confirm:
             try:
-                self.cursor.execute("DELETE FROM color_attempt WHERE tool_id = ?", (tool_id,))
+                # Check if the tool is used in any attempts
+                self.cursor.execute("SELECT 1 FROM color_attempt WHERE tool_id = ?", (tool_id,))
+                if self.cursor.fetchone():
+                    messagebox.showerror("Error", f"Cannot delete tool with ID {tool_id} because it is used in existing attempts!")
+                    return
+
                 self.cursor.execute("DELETE FROM color_tool WHERE tool_id = ?", (tool_id,))
                 self.conn.commit()
                 self.load_data()
                 messagebox.showinfo("Success", f"Deleted tool with ID {tool_id}")
+
+                # Refresh the tool dropdown in AttemptInsertScreen and AttemptModifyScreen
+                for screen_class in (AttemptInsertScreen, AttemptModifyScreen):
+                    screen = self.controller.frames.get(screen_class)
+                    if screen and hasattr(screen, "refresh_tools"):
+                        screen.refresh_tools()
+
             except sqlite3.Error as e:
                 messagebox.showerror("Error", f"Database error: {e}")

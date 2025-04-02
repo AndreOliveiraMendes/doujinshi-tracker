@@ -1,9 +1,9 @@
 # doujinshi_manager/screens/doujinshi_view.py
 import tkinter as tk
 from tkinter import messagebox, ttk
-import sqlite3  # Add sqlite3 import for exception handling
+import sqlite3
 import os
-from .doujinshi_modify import DoujinshiModifyScreen  # Import DoujinshiModifyScreen
+import shutil
 
 class DoujinshiViewScreen(tk.Frame):
     def __init__(self, parent, controller, cursor, conn):
@@ -51,6 +51,7 @@ class DoujinshiViewScreen(tk.Frame):
             self.tree.insert("", "end", values=row)
 
     def edit_selected(self):
+        from .doujinshi_modify import DoujinshiModifyScreen  # Move import here
         selected_item = self.tree.selection()
         if not selected_item:
             messagebox.showerror("Error", "Please select a doujinshi to edit!")
@@ -78,7 +79,10 @@ class DoujinshiViewScreen(tk.Frame):
                     folder_path = result[0]
                     full_path = os.path.join("doujinshi_collection", folder_path)
                     if os.path.exists(full_path):
-                        os.rmtree(full_path)
+                        try:
+                            shutil.rmtree(full_path)
+                        except OSError as e:
+                            messagebox.showwarning("Warning", f"Failed to delete directory {full_path}: {e}")
                 self.cursor.execute("DELETE FROM color_subject WHERE code = ?", (code,))
                 self.conn.commit()
                 self.load_data()

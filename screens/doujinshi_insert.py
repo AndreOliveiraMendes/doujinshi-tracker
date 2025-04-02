@@ -1,8 +1,9 @@
 # doujinshi_manager/screens/doujinshi_insert.py
 import tkinter as tk
 from tkinter import messagebox
-import sqlite3  # Add sqlite3 import for exception handling
+import sqlite3
 import os
+from .doujinshi_view import DoujinshiViewScreen  # Import DoujinshiViewScreen
 
 class DoujinshiInsertScreen(tk.Frame):
     def __init__(self, parent, controller, cursor, conn):
@@ -125,6 +126,15 @@ class DoujinshiInsertScreen(tk.Frame):
             full_path = os.path.join("doujinshi_collection", folder_path)
             os.makedirs(full_path, exist_ok=True)
             messagebox.showinfo("Success", f"Added doujinshi and created folder: {full_path}")
+
+            # Refresh the DoujinshiViewScreen
+            view_screen = self.controller.frames.get(DoujinshiViewScreen)
+            if view_screen:
+                view_screen.load_data()
+
+            # Optionally, navigate back to the view screen
+            self.controller.show_frame(DoujinshiViewScreen)
+
         except ValueError:
             messagebox.showerror("Error", "Series ID, Part ID, and Code must be numbers!")
         except sqlite3.Error as e:

@@ -2,6 +2,7 @@
 import tkinter as tk
 from tkinter import messagebox
 import os
+import shutil  # Import shutil for rmtree
 
 class DirectoryMenu(tk.Frame):
     def __init__(self, parent, controller):
@@ -35,7 +36,7 @@ class DirectoryMenu(tk.Frame):
         confirm = messagebox.askyesno("Confirm", f"Are you sure you want to delete {full_path}?")
         if confirm:
             try:
-                os.rmtree(full_path)
+                shutil.rmtree(full_path)  # Use shutil.rmtree instead of os.rmtree
                 messagebox.showinfo("Success", f"Deleted directory: {full_path}")
             except OSError as e:
                 messagebox.showerror("Error", f"Failed to delete directory: {e}")

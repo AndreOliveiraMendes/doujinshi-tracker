@@ -1,6 +1,6 @@
 # doujinshi_manager/screens/doujinshi_modify.py
 import tkinter as tk
-from tkinter import messagebox, ttk
+from tkinter import messagebox
 import sqlite3
 import os
 
@@ -112,6 +112,7 @@ class DoujinshiModifyScreen(tk.Frame):
         self.folder_entry.insert(0, folder_path if folder_path else "")
 
     def modify_doujinshi(self):
+        from .doujinshi_view import DoujinshiViewScreen  # Move import here
         code = self.code_entry.get()
         if not code:
             messagebox.showerror("Error", "Please enter a doujinshi code!")
@@ -171,6 +172,15 @@ class DoujinshiModifyScreen(tk.Frame):
                     os.rename(old_path, new_path)
 
             messagebox.showinfo("Success", f"Updated doujinshi with code {code}")
+
+            # Refresh the DoujinshiViewScreen
+            view_screen = self.controller.frames.get(DoujinshiViewScreen)
+            if view_screen:
+                view_screen.load_data()
+
+            # Navigate back to the view screen
+            self.controller.show_frame(DoujinshiViewScreen)
+
         except ValueError:
             messagebox.showerror("Error", "Code, Series ID, and Part ID must be numbers!")
         except sqlite3.Error as e:

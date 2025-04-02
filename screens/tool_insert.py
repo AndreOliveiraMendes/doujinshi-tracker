@@ -1,8 +1,10 @@
 # doujinshi_manager/screens/tool_insert.py
 import tkinter as tk
-from tkinter import messagebox, ttk
+from tkinter import messagebox
 import sqlite3
-import os
+from .tool_view import ToolViewScreen
+from .attempt_insert import AttemptInsertScreen  # Import to refresh dropdown
+from .attempt_modify import AttemptModifyScreen  # Import to refresh dropdown
 
 class ToolInsertScreen(tk.Frame):
     def __init__(self, parent, controller, cursor, conn):
@@ -96,6 +98,21 @@ class ToolInsertScreen(tk.Frame):
             """, (tool_id, tool_name, tool_url))
             self.conn.commit()
             messagebox.showinfo("Success", f"Added tool with ID {tool_id}")
+
+            # Refresh the ToolViewScreen
+            view_screen = self.controller.frames.get(ToolViewScreen)
+            if view_screen:
+                view_screen.load_data()
+
+            # Refresh the tool dropdown in AttemptInsertScreen and AttemptModifyScreen
+            for screen_class in (AttemptInsertScreen, AttemptModifyScreen):
+                screen = self.controller.frames.get(screen_class)
+                if screen and hasattr(screen, "refresh_tools"):
+                    screen.refresh_tools()
+
+            # Navigate back to the view screen
+            self.controller.show_frame(ToolViewScreen)
+
         except ValueError:
             messagebox.showerror("Error", "Tool ID must be a number!")
         except sqlite3.Error as e:

@@ -1,8 +1,7 @@
 # doujinshi_manager/screens/tool_modify.py
 import tkinter as tk
-from tkinter import messagebox, ttk
+from tkinter import messagebox
 import sqlite3
-import os
 
 class ToolModifyScreen(tk.Frame):
     def __init__(self, parent, controller, cursor, conn):
@@ -88,6 +87,9 @@ class ToolModifyScreen(tk.Frame):
         self.tool_url_entry.insert(0, tool_url if tool_url is not None else "")
 
     def modify_tool(self):
+        from .tool_view import ToolViewScreen  # Move import here
+        from .attempt_insert import AttemptInsertScreen  # Move import here
+        from .attempt_modify import AttemptModifyScreen  # Move import here
         tool_id = self.tool_id_entry.get()
         if not tool_id:
             messagebox.showerror("Error", "Tool ID is required!")
@@ -116,6 +118,21 @@ class ToolModifyScreen(tk.Frame):
             """, (tool_name, tool_url, tool_id))
             self.conn.commit()
             messagebox.showinfo("Success", f"Updated tool with ID {tool_id}")
+
+            # Refresh the ToolViewScreen
+            view_screen = self.controller.frames.get(ToolViewScreen)
+            if view_screen:
+                view_screen.load_data()
+
+            # Refresh the tool dropdown in AttemptInsertScreen and AttemptModifyScreen
+            for screen_class in (AttemptInsertScreen, AttemptModifyScreen):
+                screen = self.controller.frames.get(screen_class)
+                if screen and hasattr(screen, "refresh_tools"):
+                    screen.refresh_tools()
+
+            # Navigate back to the view screen
+            self.controller.show_frame(ToolViewScreen)
+
         except ValueError:
             messagebox.showerror("Error", "Tool ID must be a number!")
         except sqlite3.Error as e:

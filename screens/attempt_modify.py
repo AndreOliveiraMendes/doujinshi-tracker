@@ -1,7 +1,7 @@
 # doujinshi_manager/screens/attempt_modify.py
 import tkinter as tk
 from tkinter import messagebox
-from tkinter import ttk  # Import ttk for Combobox
+from tkinter import ttk
 import sqlite3
 
 class AttemptModifyScreen(tk.Frame):
@@ -45,7 +45,7 @@ class AttemptModifyScreen(tk.Frame):
         # Use a grid layout for better alignment
         fields = [
             ("Code:", "code_entry", tk.Entry),
-            ("Tool:", "tool_combobox", None),  # We'll create the Combobox separately
+            ("Tool:", "tool_combobox", None),
             ("Attempt Folder Path (leave blank to keep current):", "attempt_folder_path_entry", tk.Entry),
             ("Color Status (leave blank to keep current):", "attempt_color_status_entry", tk.Entry),
             ("Notes (leave blank to keep current):", "attempt_notes_entry", tk.Entry)
@@ -58,11 +58,9 @@ class AttemptModifyScreen(tk.Frame):
         for i, (label_text, widget_name, widget_class) in enumerate(fields):
             tk.Label(self.scrollable_frame, text=label_text).grid(row=i, column=0, sticky="w", padx=5, pady=2)
             if widget_name == "tool_combobox":
-                # Create a Combobox for tool selection
                 self.tool_combobox = ttk.Combobox(self.scrollable_frame, values=list(self.tool_map.values()), width=37, state="readonly")
                 self.tool_combobox.grid(row=i, column=1, sticky="ew", padx=5, pady=2)
             else:
-                # Create Entry widgets for other fields
                 setattr(self, widget_name, widget_class(self.scrollable_frame, width=40))
                 getattr(self, widget_name).grid(row=i, column=1, sticky="ew", padx=5, pady=2)
 
@@ -78,7 +76,6 @@ class AttemptModifyScreen(tk.Frame):
         tk.Button(button_frame, text="Main Menu", command=controller.go_to_main_menu).pack(side="left", padx=5)
 
     def _load_tools(self):
-        """Load tools from the color_tool table into the tool_map dictionary."""
         try:
             self.cursor.execute("SELECT tool_id, tool_name FROM color_tool")
             tools = self.cursor.fetchall()
@@ -86,6 +83,15 @@ class AttemptModifyScreen(tk.Frame):
         except sqlite3.Error as e:
             messagebox.showerror("Error", f"Failed to load tools: {e}")
             self.tool_map = {}
+
+    def refresh_tools(self):
+        self._load_tools()
+        self.tool_combobox["values"] = list(self.tool_map.values())
+        # Check if the current selection is still valid
+        current_selection = self.tool_combobox.get()
+        if current_selection and current_selection not in self.tool_map.values():
+            self.tool_combobox.set("")
+            messagebox.showwarning("Warning", "The previously selected tool is no longer available. Please select a new tool.")
 
     def _update_scrollregion(self, event=None):
         self.canvas.configure(scrollregion=self.canvas.bbox("all"))
@@ -107,18 +113,22 @@ class AttemptModifyScreen(tk.Frame):
         self.attempt_notes_entry.delete(0, tk.END)
 
         self.code_entry.insert(0, str(code))
-        # Set the Combobox to the current tool_id
         if tool_id in self.tool_map:
             self.tool_combobox.set(self.tool_map[tool_id])
         else:
             self.tool_combobox.set("")
+            messagebox.showwarning("Warning", f"Tool ID {tool_id} not found. Please select a new tool.")
         self.attempt_folder_path_entry.insert(0, folder_path if folder_path is not None else "")
         self.attempt_color_status_entry.insert(0, status if status is not None else "")
         self.attempt_notes_entry.insert(0, notes if notes is not None else "")
 
     def modify_attempt(self):
+        from .attempt_view import AttemptViewScreen  # Move import here
+        if not self.tool_map:
+            messagebox.showerror("Error", "No tools available! Please add a tool in 'Manage Tools' first.")
+            return
+
         code = self.code_entry.get()
-        # Get the selected tool from the Combobox
         selected_tool = self.tool_combobox.get()
         if not code or not selected_tool:
             messagebox.showerror("Error", "Code and Tool are required!")
@@ -126,7 +136,6 @@ class AttemptModifyScreen(tk.Frame):
 
         try:
             code = int(code)
-            # Extract tool_id from the selected tool string (format: "tool_id - tool_name")
             tool_id = int(selected_tool.split(" - ")[0])
             self.cursor.execute("SELECT * FROM color_attempt WHERE code = ? AND tool_id = ?", (code, tool_id))
             result = self.cursor.fetchone()
@@ -152,6 +161,15 @@ class AttemptModifyScreen(tk.Frame):
             """, (folder_path, status, notes, code, tool_id))
             self.conn.commit()
             messagebox.showinfo("Success", f"Updated attempt for code {code} with tool ID {tool_id}")
+
+            # Refresh the AttemptViewScreen
+            view_screen = self.controller.frames.get(AttemptViewScreen)
+            if view_screen:
+                view_screen.load_data()
+
+            # Navigate back to the view screen
+            self.controller.show_frame(AttemptViewScreen)
+
         except ValueError:
             messagebox.showerror("Error", "Code must be a number!")
         except sqlite3.Error as e:

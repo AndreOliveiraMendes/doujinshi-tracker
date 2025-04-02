@@ -1,8 +1,7 @@
 # doujinshi_manager/screens/attempt_view.py
 import tkinter as tk
 from tkinter import messagebox, ttk
-import sqlite3  # Add sqlite3 import for exception handling
-from .attempt_modify import AttemptModifyScreen  # Import AttemptModifyScreen
+import sqlite3
 
 class AttemptViewScreen(tk.Frame):
     def __init__(self, parent, controller, cursor, conn):
@@ -12,18 +11,18 @@ class AttemptViewScreen(tk.Frame):
         self.conn = conn
         tk.Label(self, text="View Attempts", font=("Arial", 14)).pack(pady=10)
 
-        self.tree = ttk.Treeview(self, columns=("Code", "Tool ID", "Folder Path", "Status", "Notes"), show="headings")
+        self.tree = ttk.Treeview(self, columns=("Code", "Tool ID", "Folder Path", "Color Status", "Notes"), show="headings")
         self.tree.heading("Code", text="Code")
         self.tree.heading("Tool ID", text="Tool ID")
         self.tree.heading("Folder Path", text="Folder Path")
-        self.tree.heading("Status", text="Status")
+        self.tree.heading("Color Status", text="Color Status")
         self.tree.heading("Notes", text="Notes")
 
         self.tree.column("Code", width=60)
         self.tree.column("Tool ID", width=60)
         self.tree.column("Folder Path", width=100)
-        self.tree.column("Status", width=80)
-        self.tree.column("Notes", width=200)
+        self.tree.column("Color Status", width=100)
+        self.tree.column("Notes", width=150)
 
         scrollbar = ttk.Scrollbar(self, orient="vertical", command=self.tree.yview)
         self.tree.configure(yscrollcommand=scrollbar.set)
@@ -46,6 +45,7 @@ class AttemptViewScreen(tk.Frame):
             self.tree.insert("", "end", values=row)
 
     def edit_selected(self):
+        from .attempt_modify import AttemptModifyScreen  # Move import here
         selected_item = self.tree.selection()
         if not selected_item:
             messagebox.showerror("Error", "Please select an attempt to edit!")

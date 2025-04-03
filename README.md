@@ -1,6 +1,6 @@
 # Doujinshi Colorization Manager
 
-This project is a GUI application to manage doujinshi colorization projects, including tracking doujinshi metadata, colorization attempts, and tools used. All functionality is contained in a single `tracker.py` file.
+This project is a GUI application to manage doujinshi colorization projects, including tracking doujinshi metadata, colorization attempts, and tools used. functionality are split in the screen folder and in `app.py` (manages the app and screens), `database.py` (manage the database) and `main.py` act as main entrace point.
 
 ## Project Structure
 ```
@@ -55,7 +55,7 @@ sqlite3 db/tracker.db < db/schema.sql
 - Ensure you have Python 3 and Tkinter installed.
 - Run the app:
 ```bash
-python tracker.py
+python main.py
 ```
 ### Notes
 - The doujinshi_collection/ folder is tracked as an empty directory. Add your doujinshi files locally as needed.

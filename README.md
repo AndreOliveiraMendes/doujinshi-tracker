@@ -1,6 +1,10 @@
 # Doujinshi Colorization Manager
 
-This project is a GUI application to manage doujinshi colorization projects, including tracking doujinshi metadata, colorization attempts, and tools used. functionality are split in the screen folder and in `app.py` (manages the app and screens), `database.py` (manage the database) and `main.py` act as main entrace point.
+This project is a GUI application for managing doujinshi colorization projects. It tracks doujinshi metadata, colorization attempts, and the tools used. The functionality is split into the following components:
+- The screen folder contains the screen definitions.
+- app.py manages the application and screens.
+- database.py handles database operations.
+- main.py serves as the main entry point.
 
 ## Project Structure
 ```

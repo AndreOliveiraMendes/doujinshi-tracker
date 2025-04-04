@@ -28,6 +28,9 @@ class DirectoryMenu(tk.Frame):
         self.tree.pack(fill="both", expand=True, padx=5, pady=5)
         scrollbar.pack(side="right", fill="y")
 
+        # Load tools for folder creation
+        self.tools = self.load_tools()
+
         # Load the folder data
         self.load_folders()
 
@@ -37,6 +40,16 @@ class DirectoryMenu(tk.Frame):
         tk.Button(self, text="Delete Selected", command=self.delete_selected).pack(pady=5)
         tk.Button(self, text="Back", command=controller.go_back).pack(pady=5)
         tk.Button(self, text="Main Menu", command=controller.go_to_main_menu).pack(pady=5)
+
+    def load_tools(self):
+        """Load available tools from the color_tool table."""
+        try:
+            self.cursor.execute("SELECT tool_id, tool_name FROM color_tool")
+            tools = {row[0]: row[1] for row in self.cursor.fetchall()}
+            return tools
+        except Exception as e:
+            messagebox.showerror("Error", f"Failed to load tools: {e}")
+            return {}
 
     def has_subfolders(self, folder_path):
         """Check if the given folder has subfolders."""
@@ -61,12 +74,14 @@ class DirectoryMenu(tk.Frame):
 
         def add_folder_to_tree(parent_id, folder_path, relative_path=""):
             folder_name = os.path.basename(folder_path)
+            # Build the relative path using forward slashes
+            current_relative_path = f"{relative_path}/{folder_name}" if relative_path else folder_name
             has_subs = self.has_subfolders(folder_path)
             node_id = self.tree.insert(
                 parent_id,
                 "end",
                 text=folder_name,
-                values=(os.path.join("doujinshi_collection", relative_path, folder_name) if relative_path else folder_path, "Yes" if has_subs else "No")
+                values=(current_relative_path, "Yes" if has_subs else "No")
             )
             if has_subs:
                 try:
@@ -74,8 +89,7 @@ class DirectoryMenu(tk.Frame):
                         for entry in sorted(entries, key=lambda e: e.name):
                             if entry.is_dir():
                                 sub_path = os.path.join(folder_path, entry.name)
-                                sub_relative_path = os.path.join(relative_path, entry.name) if relative_path else entry.name
-                                add_folder_to_tree(node_id, sub_path, sub_relative_path)
+                                add_folder_to_tree(node_id, sub_path, current_relative_path)
                 except OSError as e:
                     messagebox.showerror("Error", f"Failed to load subfolders for {folder_path}: {e}")
 
@@ -89,36 +103,74 @@ class DirectoryMenu(tk.Frame):
             messagebox.showerror("Error", f"Failed to load folders: {e}")
 
     def create_folder(self):
-        """Create a new folder in doujinshi_collection, supporting subfolders."""
-        folder_path = simpledialog.askstring(
+        """Create a new folder in doujinshi_collection with the correct structure."""
+        # Prompt for the base path (cX or cX/pY)
+        base_path = simpledialog.askstring(
             "Create Folder",
-            "Enter the folder path (e.g., series_name/c1/p1):",
+            "Enter the base path (e.g., c1 or c1/p1):",
             parent=self
         )
-        if not folder_path:
+        if not base_path:
             return  # User cancelled
 
-        # Clean the input (remove leading/trailing slashes, normalize separators)
-        folder_path = folder_path.strip("/\\").replace("\\", "/")
-        if not folder_path:
-            messagebox.showerror("Error", "Folder path cannot be empty!")
+        # Clean the input
+        base_path = base_path.strip("/\\").replace("\\", "/")
+        if not base_path:
+            messagebox.showerror("Error", "Base path cannot be empty!")
             return
 
-        # Construct the full path under doujinshi_collection
-        full_path = os.path.join("doujinshi_collection", folder_path)
-
-        # Check if the folder already exists
-        if os.path.exists(full_path):
-            messagebox.showerror("Error", f"Folder '{folder_path}' already exists!")
+        # Validate the base path format (should be cX or cX/pY)
+        parts = base_path.split("/")
+        if len(parts) not in [1, 2]:
+            messagebox.showerror("Error", "Base path must be in the format 'cX' or 'cX/pY'!")
+            return
+        if not parts[0].startswith("c"):
+            messagebox.showerror("Error", "Base path must start with a chapter (e.g., c1)!")
+            return
+        if len(parts) == 2 and not parts[1].startswith("p"):
+            messagebox.showerror("Error", "Second part must be a part (e.g., p1)!")
             return
 
-        # Create the folder and any intermediate directories
-        try:
-            os.makedirs(full_path, exist_ok=True)
-            messagebox.showinfo("Success", f"Created folder '{folder_path}'")
-            self.load_folders()  # Refresh the Treeview
-        except OSError as e:
-            messagebox.showerror("Error", f"Failed to create folder: {e}")
+        # Prompt for the tool to use
+        if not self.tools:
+            messagebox.showerror("Error", "No tools available! Please add a tool first.")
+            return
+
+        tool_names = list(self.tools.values())
+        tool_window = tk.Toplevel(self)
+        tool_window.title("Select Tool")
+        tool_window.geometry("300x150")
+
+        tk.Label(tool_window, text="Select a tool for the folder:").pack(pady=5)
+        tool_var = tk.StringVar(value=tool_names[0])
+        tool_menu = ttk.Combobox(tool_window, textvariable=tool_var, values=tool_names, state="readonly")
+        tool_menu.pack(pady=5)
+
+        def on_confirm():
+            tool_name = tool_var.get()
+            tool_window.destroy()
+
+            # Construct the full path
+            full_path = os.path.join("doujinshi_collection", base_path, tool_name)
+
+            # Check if the folder already exists
+            if os.path.exists(full_path):
+                messagebox.showerror("Error", f"Folder '{base_path}/{tool_name}' already exists!")
+                return
+
+            # Create the folder
+            try:
+                os.makedirs(full_path, exist_ok=True)
+                messagebox.showinfo("Success", f"Created folder '{base_path}/{tool_name}'")
+                self.load_folders()  # Refresh the Treeview
+            except OSError as e:
+                messagebox.showerror("Error", f"Failed to create folder: {e}")
+
+        tk.Button(tool_window, text="Confirm", command=on_confirm).pack(pady=5)
+        tk.Button(tool_window, text="Cancel", command=tool_window.destroy).pack(pady=5)
+        tool_window.transient(self)
+        tool_window.grab_set()
+        self.wait_window(tool_window)
 
     def rename_selected(self):
         """Rename the selected folder."""
@@ -128,7 +180,7 @@ class DirectoryMenu(tk.Frame):
             return
 
         folder_name = self.tree.item(selected_item)["text"]
-        old_path = self.tree.item(selected_item)["values"][0]
+        old_relative_path = self.tree.item(selected_item)["values"][0]
         has_subfolders = self.tree.item(selected_item)["values"][1] == "Yes"
 
         # Warn if the folder has subfolders
@@ -147,19 +199,30 @@ class DirectoryMenu(tk.Frame):
         if new_name == folder_name:
             return
 
-        # Construct the new path
-        parent_path = os.path.dirname(old_path)
-        new_path = os.path.join(parent_path, new_name)
+        # Construct the old and new full paths
+        old_path = os.path.join("doujinshi_collection", old_relative_path)
+        parent_relative_path = os.path.dirname(old_relative_path) if "/" in old_relative_path else ""
+        new_relative_path = f"{parent_relative_path}/{new_name}" if parent_relative_path else new_name
+        new_path = os.path.join("doujinshi_collection", new_relative_path)
 
         if os.path.exists(new_path):
             messagebox.showerror("Error", f"A folder named '{new_name}' already exists!")
             return
 
+        # Validate the new name based on its level
+        level = len(old_relative_path.split("/"))
+        if level == 1 and not new_name.startswith("c"):
+            messagebox.showerror("Error", "Top-level folder must start with 'c' (e.g., c1)!")
+            return
+        if level == 2 and old_relative_path.startswith("c") and not new_name.startswith("p"):
+            messagebox.showerror("Error", "Second-level folder must start with 'p' (e.g., p1)!")
+            return
+        if level == 3 and new_name not in self.tools.values():
+            messagebox.showerror("Error", "Third-level folder must be a valid tool name!")
+            return
+
         try:
             os.rename(old_path, new_path)
-            # Update the database: replace the old path with the new path in folder_path
-            old_relative_path = os.path.relpath(old_path, "doujinshi_collection")
-            new_relative_path = os.path.relpath(new_path, "doujinshi_collection")
             self.cursor.execute(
                 "UPDATE color_subject SET folder_path = REPLACE(folder_path, ?, ?) WHERE folder_path LIKE ?",
                 (old_relative_path, new_relative_path, old_relative_path + "%")
@@ -180,10 +243,9 @@ class DirectoryMenu(tk.Frame):
             return
 
         folder_name = self.tree.item(selected_item)["text"]
-        folder_path = self.tree.item(selected_item)["values"][0]
+        relative_path = self.tree.item(selected_item)["values"][0]
         has_subfolders = self.tree.item(selected_item)["values"][1] == "Yes"
 
-        # Warn if the folder has subfolders
         if has_subfolders:
             confirm = messagebox.askyesno(
                 "Warning",
@@ -192,14 +254,12 @@ class DirectoryMenu(tk.Frame):
             if not confirm:
                 return
 
-        # Confirm deletion
         confirm = messagebox.askyesno("Confirm", f"Are you sure you want to delete the folder '{folder_name}' and its associated data?")
         if not confirm:
             return
 
         try:
-            # Get the relative path for database queries
-            relative_path = os.path.relpath(folder_path, "doujinshi_collection")
+            folder_path = os.path.join("doujinshi_collection", relative_path)
             self.cursor.execute("SELECT code FROM color_subject WHERE folder_path LIKE ?", (relative_path + "%",))
             codes = [row[0] for row in self.cursor.fetchall()]
 

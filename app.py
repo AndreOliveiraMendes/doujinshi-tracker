@@ -57,7 +57,8 @@ class DoujinshiManagerApp(tk.Tk):
         if hasattr(frame, "refresh_tools"):
             frame.refresh_tools()
         frame.tkraise()
-        self.frame_history.append(frame_class)
+        if not self.frame_history or (self.frame_history and frame_class != self.frame_history[-1]):
+            self.frame_history.append(frame_class)
 
     def go_back(self):
         if len(self.frame_history) > 1:

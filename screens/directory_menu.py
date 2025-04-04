@@ -1,42 +1,220 @@
 # doujinshi_manager/screens/directory_menu.py
 import tkinter as tk
-from tkinter import messagebox
+from tkinter import ttk, messagebox, simpledialog
 import os
-import shutil  # Import shutil for rmtree
+import shutil
 
 class DirectoryMenu(tk.Frame):
-    def __init__(self, parent, controller):
+    def __init__(self, parent, controller, cursor, conn):
         super().__init__(parent)
-        tk.Label(self, text="Manage Directories", font=("Arial", 14)).pack(pady=20)
+        self.controller = controller
+        self.cursor = cursor
+        self.conn = conn
 
-        tk.Button(self, text="Create Directory", command=self.create_directory).pack(pady=5)
-        tk.Button(self, text="Delete Directory", command=self.delete_directory).pack(pady=5)
+        tk.Label(self, text="Directory Menu", font=("Arial", 14)).pack(pady=10)
+
+        # Create a Treeview to display folders hierarchically
+        self.tree = ttk.Treeview(self, columns=("Path", "Has Subfolders"), show="tree headings")
+        self.tree.heading("#0", text="Folder Structure")
+        self.tree.heading("Path", text="Full Path")
+        self.tree.heading("Has Subfolders", text="Has Subfolders")
+        self.tree.column("#0", width=200)
+        self.tree.column("Path", width=300)
+        self.tree.column("Has Subfolders", width=100)
+
+        # Add scrollbar
+        scrollbar = ttk.Scrollbar(self, orient="vertical", command=self.tree.yview)
+        self.tree.configure(yscrollcommand=scrollbar.set)
+        self.tree.pack(fill="both", expand=True, padx=5, pady=5)
+        scrollbar.pack(side="right", fill="y")
+
+        # Load the folder data
+        self.load_folders()
+
+        # Buttons
+        tk.Button(self, text="Create Folder", command=self.create_folder).pack(pady=5)
+        tk.Button(self, text="Rename Selected", command=self.rename_selected).pack(pady=5)
+        tk.Button(self, text="Delete Selected", command=self.delete_selected).pack(pady=5)
         tk.Button(self, text="Back", command=controller.go_back).pack(pady=5)
         tk.Button(self, text="Main Menu", command=controller.go_to_main_menu).pack(pady=5)
 
-    def create_directory(self):
-        folder_path = tk.simpledialog.askstring("Input", "Enter folder path (e.g., c12):", parent=self)
+    def has_subfolders(self, folder_path):
+        """Check if the given folder has subfolders."""
+        try:
+            with os.scandir(folder_path) as entries:
+                for entry in entries:
+                    if entry.is_dir():
+                        return True
+            return False
+        except OSError as e:
+            messagebox.showerror("Error", f"Failed to check subfolders for {folder_path}: {e}")
+            return False
+
+    def load_folders(self):
+        """Load all folders in doujinshi_collection into the Treeview hierarchically."""
+        for item in self.tree.get_children():
+            self.tree.delete(item)
+
+        base_path = "doujinshi_collection"
+        if not os.path.exists(base_path):
+            os.makedirs(base_path)
+
+        def add_folder_to_tree(parent_id, folder_path, relative_path=""):
+            folder_name = os.path.basename(folder_path)
+            has_subs = self.has_subfolders(folder_path)
+            node_id = self.tree.insert(
+                parent_id,
+                "end",
+                text=folder_name,
+                values=(os.path.join("doujinshi_collection", relative_path, folder_name) if relative_path else folder_path, "Yes" if has_subs else "No")
+            )
+            if has_subs:
+                try:
+                    with os.scandir(folder_path) as entries:
+                        for entry in sorted(entries, key=lambda e: e.name):
+                            if entry.is_dir():
+                                sub_path = os.path.join(folder_path, entry.name)
+                                sub_relative_path = os.path.join(relative_path, entry.name) if relative_path else entry.name
+                                add_folder_to_tree(node_id, sub_path, sub_relative_path)
+                except OSError as e:
+                    messagebox.showerror("Error", f"Failed to load subfolders for {folder_path}: {e}")
+
+        try:
+            with os.scandir(base_path) as entries:
+                for entry in sorted(entries, key=lambda e: e.name):
+                    if entry.is_dir():
+                        folder_path = os.path.join(base_path, entry.name)
+                        add_folder_to_tree("", folder_path)
+        except OSError as e:
+            messagebox.showerror("Error", f"Failed to load folders: {e}")
+
+    def create_folder(self):
+        """Create a new folder in doujinshi_collection, supporting subfolders."""
+        folder_path = simpledialog.askstring(
+            "Create Folder",
+            "Enter the folder path (e.g., series_name/c1/p1):",
+            parent=self
+        )
         if not folder_path:
+            return  # User cancelled
+
+        # Clean the input (remove leading/trailing slashes, normalize separators)
+        folder_path = folder_path.strip("/\\").replace("\\", "/")
+        if not folder_path:
+            messagebox.showerror("Error", "Folder path cannot be empty!")
             return
+
+        # Construct the full path under doujinshi_collection
         full_path = os.path.join("doujinshi_collection", folder_path)
+
+        # Check if the folder already exists
+        if os.path.exists(full_path):
+            messagebox.showerror("Error", f"Folder '{folder_path}' already exists!")
+            return
+
+        # Create the folder and any intermediate directories
         try:
             os.makedirs(full_path, exist_ok=True)
-            messagebox.showinfo("Success", f"Created directory: {full_path}")
+            messagebox.showinfo("Success", f"Created folder '{folder_path}'")
+            self.load_folders()  # Refresh the Treeview
         except OSError as e:
-            messagebox.showerror("Error", f"Failed to create directory: {e}")
+            messagebox.showerror("Error", f"Failed to create folder: {e}")
 
-    def delete_directory(self):
-        folder_path = tk.simpledialog.askstring("Input", "Enter folder path to delete (e.g., c12):", parent=self)
-        if not folder_path:
+    def rename_selected(self):
+        """Rename the selected folder."""
+        selected_item = self.tree.selection()
+        if not selected_item:
+            messagebox.showerror("Error", "Please select a folder to rename!")
             return
-        full_path = os.path.join("doujinshi_collection", folder_path)
-        if not os.path.exists(full_path):
-            messagebox.showerror("Error", f"Directory {full_path} does not exist!")
+
+        folder_name = self.tree.item(selected_item)["text"]
+        old_path = self.tree.item(selected_item)["values"][0]
+        has_subfolders = self.tree.item(selected_item)["values"][1] == "Yes"
+
+        # Warn if the folder has subfolders
+        if has_subfolders:
+            confirm = messagebox.askyesno(
+                "Warning",
+                f"The folder '{folder_name}' contains subfolders. Renaming it will only affect the selected folder. Proceed?"
+            )
+            if not confirm:
+                return
+
+        new_name = simpledialog.askstring("Rename Folder", f"Enter new name for '{folder_name}':", initialvalue=folder_name)
+        if not new_name:
             return
-        confirm = messagebox.askyesno("Confirm", f"Are you sure you want to delete {full_path}?")
-        if confirm:
-            try:
-                shutil.rmtree(full_path)  # Use shutil.rmtree instead of os.rmtree
-                messagebox.showinfo("Success", f"Deleted directory: {full_path}")
-            except OSError as e:
-                messagebox.showerror("Error", f"Failed to delete directory: {e}")
+
+        if new_name == folder_name:
+            return
+
+        # Construct the new path
+        parent_path = os.path.dirname(old_path)
+        new_path = os.path.join(parent_path, new_name)
+
+        if os.path.exists(new_path):
+            messagebox.showerror("Error", f"A folder named '{new_name}' already exists!")
+            return
+
+        try:
+            os.rename(old_path, new_path)
+            # Update the database: replace the old path with the new path in folder_path
+            old_relative_path = os.path.relpath(old_path, "doujinshi_collection")
+            new_relative_path = os.path.relpath(new_path, "doujinshi_collection")
+            self.cursor.execute(
+                "UPDATE color_subject SET folder_path = REPLACE(folder_path, ?, ?) WHERE folder_path LIKE ?",
+                (old_relative_path, new_relative_path, old_relative_path + "%")
+            )
+            self.conn.commit()
+            messagebox.showinfo("Success", f"Renamed folder to '{new_name}'")
+            self.load_folders()
+        except OSError as e:
+            messagebox.showerror("Error", f"Failed to rename folder: {e}")
+        except sqlite3.Error as e:
+            messagebox.showerror("Error", f"Database error: {e}")
+
+    def delete_selected(self):
+        """Delete the selected folder and associated database entries."""
+        selected_item = self.tree.selection()
+        if not selected_item:
+            messagebox.showerror("Error", "Please select a folder to delete!")
+            return
+
+        folder_name = self.tree.item(selected_item)["text"]
+        folder_path = self.tree.item(selected_item)["values"][0]
+        has_subfolders = self.tree.item(selected_item)["values"][1] == "Yes"
+
+        # Warn if the folder has subfolders
+        if has_subfolders:
+            confirm = messagebox.askyesno(
+                "Warning",
+                f"The folder '{folder_name}' contains subfolders. Deleting it will remove all subfolders and their contents. Proceed?"
+            )
+            if not confirm:
+                return
+
+        # Confirm deletion
+        confirm = messagebox.askyesno("Confirm", f"Are you sure you want to delete the folder '{folder_name}' and its associated data?")
+        if not confirm:
+            return
+
+        try:
+            # Get the relative path for database queries
+            relative_path = os.path.relpath(folder_path, "doujinshi_collection")
+            self.cursor.execute("SELECT code FROM color_subject WHERE folder_path LIKE ?", (relative_path + "%",))
+            codes = [row[0] for row in self.cursor.fetchall()]
+
+            for code in codes:
+                self.cursor.execute("DELETE FROM color_attempt WHERE code = ?", (code,))
+
+            self.cursor.execute("DELETE FROM color_subject WHERE folder_path LIKE ?", (relative_path + "%",))
+            self.conn.commit()
+
+            if os.path.exists(folder_path):
+                shutil.rmtree(folder_path)
+
+            messagebox.showinfo("Success", f"Deleted folder '{folder_name}' and associated data")
+            self.load_folders()
+        except OSError as e:
+            messagebox.showerror("Error", f"Failed to delete folder: {e}")
+        except sqlite3.Error as e:
+            messagebox.showerror("Error", f"Database error: {e}")

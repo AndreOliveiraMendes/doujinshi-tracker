@@ -41,7 +41,7 @@ class DoujinshiManagerApp(tk.Tk):
             # Screens that interact with the database need cursor and conn
             if F in (DoujinshiViewScreen, DoujinshiInsertScreen, DoujinshiModifyScreen,
                      AttemptViewScreen, AttemptInsertScreen, AttemptModifyScreen,
-                     ToolViewScreen, ToolInsertScreen, ToolModifyScreen):
+                     ToolViewScreen, ToolInsertScreen, ToolModifyScreen, DirectoryMenu):
                 frame = F(container, self, self.cursor, self.conn)
             else:
                 # Screens that don't need database access (e.g., MainMenu, DatabaseMenu)

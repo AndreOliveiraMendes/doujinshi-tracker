@@ -90,6 +90,7 @@ class DoujinshiInsertScreen(tk.Frame):
             self.canvas.yview_scroll(-1, "units")
 
     def insert_doujinshi(self):
+        from .directory_menu import DirectoryMenu
         series_id = self.series_id_entry.get()
         part_id = self.part_id_entry.get()
         code = self.code_entry.get()
@@ -131,6 +132,9 @@ class DoujinshiInsertScreen(tk.Frame):
             view_screen = self.controller.frames.get(DoujinshiViewScreen)
             if view_screen:
                 view_screen.load_data()
+            DirectoryMenu_screen = self.controller.frames.get(DirectoryMenu)
+            if DirectoryMenu_screen:
+                DirectoryMenu_screen.load_folders()
 
             # Optionally, navigate back to the view screen
             self.controller.show_frame(DoujinshiViewScreen)

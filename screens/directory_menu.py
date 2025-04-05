@@ -119,7 +119,7 @@ class DirectoryMenu(tk.Frame):
             messagebox.showerror("Error", "Base path cannot be empty!")
             return
 
-        # Validate the base path format (should be cX or cX/pY)
+        # Validate the base path format (should be cX or cX/pY or cX/pY)
         parts = base_path.split("/")
         if len(parts) not in [1, 2]:
             messagebox.showerror("Error", "Base path must be in the format 'cX' or 'cX/pY'!")

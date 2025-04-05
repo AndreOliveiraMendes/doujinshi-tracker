@@ -1,158 +1,141 @@
 # doujinshi_manager/screens/attempt_insert.py
 import tkinter as tk
-from tkinter import messagebox
-from tkinter import ttk
-import sqlite3
-from .attempt_view import AttemptViewScreen  # Import AttemptViewScreen
+from tkinter import ttk, messagebox
+import os
 
 class AttemptInsertScreen(tk.Frame):
     def __init__(self, parent, controller, cursor, conn):
         super().__init__(parent)
-        self.controller = controller  # Store controller for navigation
+        self.controller = controller
         self.cursor = cursor
         self.conn = conn
-        tk.Label(self, text="Insert New Attempt", font=("Arial", 14)).pack(pady=10)
 
-        # Create a frame to hold the canvas and scrollbar
-        self.canvas_frame = tk.Frame(self)
-        self.canvas_frame.pack(fill="both", expand=True, padx=10, pady=5)
+        tk.Label(self, text="Insert Color Attempt", font=("Arial", 14)).pack(pady=10)
 
-        # Create the canvas and scrollbar
-        self.canvas = tk.Canvas(self.canvas_frame)
-        self.scrollbar = tk.Scrollbar(self.canvas_frame, orient="vertical", command=self.canvas.yview)
-        self.scrollable_frame = tk.Frame(self.canvas)
+        # Fetch available codes from color_subject
+        self.codes = self.load_codes()
+        if not self.codes:
+            tk.Label(self, text="No doujinshi available! Please insert a doujinshi first.").pack()
+            tk.Button(self, text="Back", command=controller.go_back).pack(pady=5)
+            tk.Button(self, text="Main Menu", command=controller.go_to_main_menu).pack(pady=5)
+            return
 
-        # Configure the canvas
-        self.canvas.configure(yscrollcommand=self.scrollbar.set)
+        # Code dropdown
+        tk.Label(self, text="Code").pack()
+        self.code_var = tk.StringVar(value=self.codes[0])  # Default to the first code
+        self.code_combobox = ttk.Combobox(self, textvariable=self.code_var, values=self.codes, state="readonly")
+        self.code_combobox.pack()
 
-        # Pack the canvas and scrollbar
-        self.scrollbar.pack(side="right", fill="y")
-        self.canvas.pack(side="left", fill="both", expand=True)
+        # Tool dropdown
+        self.tools = self.load_tools()
+        if not self.tools:
+            tk.Label(self, text="No tools available! Please add a tool first.").pack()
+            tk.Button(self, text="Back", command=controller.go_back).pack(pady=5)
+            tk.Button(self, text="Main Menu", command=controller.go_to_main_menu).pack(pady=5)
+            return
 
-        # Add the scrollable frame to the canvas
-        self.canvas.create_window((0, 0), window=self.scrollable_frame, anchor="nw")
+        tk.Label(self, text="Tool").pack()
+        tool_names = list(self.tools.values())
+        self.tool_var = tk.StringVar(value=tool_names[0])
+        self.tool_combobox = ttk.Combobox(self, textvariable=self.tool_var, values=tool_names, state="readonly")
+        self.tool_combobox.pack()
 
-        # Update the scroll region when the scrollable frame changes size
-        self.scrollable_frame.bind(
-            "<Configure>",
-            self._update_scrollregion
-        )
+        # Attempt Folder Path (relative to color_subject folder_path)
+        tk.Label(self, text="Attempt Folder Path (relative to doujinshi folder, e.g., 'deepai')").pack()
+        self.attempt_folder_path_entry = tk.Entry(self)
+        self.attempt_folder_path_entry.pack()
+        self.attempt_folder_path_entry.insert(0, tool_names[0])  # Default to tool name
 
-        # Bind mouse wheel scrolling
-        self.canvas.bind_all("<MouseWheel>", self._on_mousewheel)
-        self.canvas.bind_all("<Button-4>", self._on_mousewheel)
-        self.canvas.bind_all("<Button-5>", self._on_mousewheel)
+        # Attempt Color Status dropdown
+        tk.Label(self, text="Attempt Color Status").pack()
+        self.statuses = ["Pending", "Completed", "Failed"]
+        self.status_var = tk.StringVar(value="Pending")  # Default to Pending
+        self.status_combobox = ttk.Combobox(self, textvariable=self.status_var, values=self.statuses, state="readonly")
+        self.status_combobox.pack()
 
-        # Use a grid layout for better alignment
-        fields = [
-            ("Code (Doujinshi Code):", "code_entry", tk.Entry),
-            ("Tool:", "tool_combobox", None),
-            ("Attempt Folder Path (e.g., deepai):", "attempt_folder_path_entry", tk.Entry),
-            ("Color Status (e.g., partial, complete, failed):", "attempt_color_status_entry", tk.Entry),
-            ("Notes (optional):", "attempt_notes_entry", tk.Entry)
-        ]
+        # Attempt Notes
+        tk.Label(self, text="Attempt Notes").pack()
+        self.attempt_notes_entry = tk.Entry(self)
+        self.attempt_notes_entry.pack()
 
-        # Dictionary to store tool_id to tool_name mapping
-        self.tool_map = {}
-        self._load_tools()
+        tk.Button(self, text="Insert", command=self.insert_attempt).pack(pady=10)
+        tk.Button(self, text="Back", command=controller.go_back).pack(pady=5)
+        tk.Button(self, text="Main Menu", command=controller.go_to_main_menu).pack(pady=5)
 
-        for i, (label_text, widget_name, widget_class) in enumerate(fields):
-            tk.Label(self.scrollable_frame, text=label_text).grid(row=i, column=0, sticky="w", padx=5, pady=2)
-            if widget_name == "tool_combobox":
-                self.tool_combobox = ttk.Combobox(self.scrollable_frame, values=list(self.tool_map.values()), width=37, state="readonly")
-                self.tool_combobox.grid(row=i, column=1, sticky="ew", padx=5, pady=2)
-                if self.tool_map:
-                    self.tool_combobox.set(list(self.tool_map.values())[0])
-            else:
-                setattr(self, widget_name, widget_class(self.scrollable_frame, width=40))
-                getattr(self, widget_name).grid(row=i, column=1, sticky="ew", padx=5, pady=2)
+    def load_codes(self):
+        """Load all codes from the color_subject table."""
+        try:
+            self.cursor.execute("SELECT code FROM color_subject")
+            codes = [str(row[0]) for row in self.cursor.fetchall()]
+            return codes
+        except Exception as e:
+            messagebox.showerror("Error", f"Failed to load codes: {e}")
+            return []
 
-        # Configure the grid to expand the entry fields
-        self.scrollable_frame.grid_columnconfigure(1, weight=1)
-
-        # Add buttons at the bottom
-        button_frame = tk.Frame(self.scrollable_frame)
-        button_frame.grid(row=len(fields), column=0, columnspan=2, pady=10)
-
-        tk.Button(button_frame, text="Insert", command=self.insert_attempt).pack(side="left", padx=5)
-        tk.Button(button_frame, text="Back", command=controller.go_back).pack(side="left", padx=5)
-        tk.Button(button_frame, text="Main Menu", command=controller.go_to_main_menu).pack(side="left", padx=5)
-
-    def _load_tools(self):
+    def load_tools(self):
+        """Load available tools from the color_tool table."""
         try:
             self.cursor.execute("SELECT tool_id, tool_name FROM color_tool")
-            tools = self.cursor.fetchall()
-            self.tool_map = {tool_id: f"{tool_id} - {tool_name}" for tool_id, tool_name in tools}
-        except sqlite3.Error as e:
+            tools = {row[0]: row[1] for row in self.cursor.fetchall()}
+            return tools
+        except Exception as e:
             messagebox.showerror("Error", f"Failed to load tools: {e}")
-            self.tool_map = {}
-
-    def refresh_tools(self):
-        self._load_tools()
-        self.tool_combobox["values"] = list(self.tool_map.values())
-        if self.tool_map:
-            self.tool_combobox.set(list(self.tool_map.values())[0])
-        else:
-            self.tool_combobox.set("")
-
-    def _update_scrollregion(self, event=None):
-        self.canvas.configure(scrollregion=self.canvas.bbox("all"))
-        canvas_width = self.canvas.winfo_width()
-        if canvas_width > 0:
-            self.canvas.itemconfig(self.canvas.create_window((0, 0), window=self.scrollable_frame, anchor="nw"), width=canvas_width)
-
-    def _on_mousewheel(self, event):
-        if event.num == 5 or event.delta < 0:
-            self.canvas.yview_scroll(1, "units")
-        elif event.num == 4 or event.delta > 0:
-            self.canvas.yview_scroll(-1, "units")
+            return {}
 
     def insert_attempt(self):
-        if not self.tool_map:
-            messagebox.showerror("Error", "No tools available! Please add a tool in 'Manage Tools' first.")
+        """Insert a new attempt into the color_attempt table."""
+        from .attempt_view import AttemptViewScreen
+        code = self.code_var.get()
+        tool_name = self.tool_var.get()
+        tool_id = [tid for tid, tname in self.tools.items() if tname == tool_name][0]
+        attempt_folder_path = self.attempt_folder_path_entry.get().strip()
+        attempt_color_status = self.status_var.get()
+        attempt_notes = self.attempt_notes_entry.get().strip()
+
+        # Validate inputs
+        if not code:
+            messagebox.showerror("Error", "Code is required!")
+            return
+        if not tool_id:
+            messagebox.showerror("Error", "Tool is required!")
+            return
+        if not attempt_folder_path:
+            attempt_folder_path = tool_name  # Default to tool name if empty
+            self.attempt_folder_path_entry.delete(0, tk.END)
+            self.attempt_folder_path_entry.insert(0, attempt_folder_path)
+        if not attempt_color_status:
+            messagebox.showerror("Error", "Attempt color status is required!")
             return
 
-        code = self.code_entry.get()
-        selected_tool = self.tool_combobox.get()
-        attempt_folder_path = self.attempt_folder_path_entry.get()
-        attempt_color_status = self.attempt_color_status_entry.get()
-        attempt_notes = self.attempt_notes_entry.get()
-
-        if not code or not selected_tool or not attempt_folder_path or not attempt_color_status:
-            messagebox.showerror("Error", "Code, Tool, Attempt Folder Path, and Color Status are required!")
+        # Fetch the folder_path from color_subject to construct the full path
+        self.cursor.execute("SELECT folder_path FROM color_subject WHERE code = ?", (code,))
+        result = self.cursor.fetchone()
+        if not result:
+            messagebox.showerror("Error", "Invalid code!")
             return
+        base_folder_path = result[0]  # e.g., c1 or c1/p1
 
+        # Insert into the database (store only the relative attempt_folder_path)
         try:
-            code = int(code)
-            tool_id = int(selected_tool.split(" - ")[0])
-            attempt_notes = attempt_notes if attempt_notes else None
-
-            self.cursor.execute("SELECT 1 FROM color_subject WHERE code = ?", (code,))
-            if not self.cursor.fetchone():
-                messagebox.showerror("Error", f"Doujinshi with code {code} does not exist!")
-                return
-
-            self.cursor.execute("SELECT 1 FROM color_tool WHERE tool_id = ?", (tool_id,))
-            if not self.cursor.fetchone():
-                messagebox.showerror("Error", f"Tool with ID {tool_id} does not exist!")
-                return
-
-            self.cursor.execute("""
-                INSERT INTO color_attempt (code, tool_id, attempt_folder_path, attempt_color_status, attempt_notes)
-                VALUES (?, ?, ?, ?, ?)
-            """, (code, tool_id, attempt_folder_path, attempt_color_status, attempt_notes))
+            self.cursor.execute(
+                "INSERT INTO color_attempt (code, tool_id, attempt_folder_path, attempt_color_status, attempt_notes) VALUES (?, ?, ?, ?, ?)",
+                (code, tool_id, attempt_folder_path, attempt_color_status, attempt_notes)
+            )
             self.conn.commit()
-            messagebox.showinfo("Success", f"Added attempt for code {code} with tool ID {tool_id}")
 
-            # Refresh the AttemptViewScreen
-            view_screen = self.controller.frames.get(AttemptViewScreen)
-            if view_screen:
-                view_screen.load_data()
+            # Create the attempt folder
+            full_path = os.path.join("doujinshi_collection", base_folder_path, attempt_folder_path)
+            os.makedirs(full_path, exist_ok=True)
+            messagebox.showinfo("Success", "Attempt inserted successfully!")
 
-            # Navigate back to the view screen
+            # Reflesh screen
+            AttemptView_screen = self.controller.frames.get(AttemptViewScreen)
+            if AttemptView_screen:
+                AttemptView_screen.load_data()
+
+            # optional, go to AttemptViewScreen
             self.controller.show_frame(AttemptViewScreen)
-
-        except ValueError:
-            messagebox.showerror("Error", "Code must be a number!")
-        except sqlite3.Error as e:
-            messagebox.showerror("Error", f"Database error: {e}")
+        except Exception as e:
+            messagebox.showerror("Error", f"Failed to insert attempt: {e}")
+        except OSError as e:
+            messagebox.showerror("Error", f"Failed to create attempt folder: {e}")

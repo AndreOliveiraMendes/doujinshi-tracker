@@ -21,7 +21,7 @@ class DoujinshiManagerApp(tk.Tk):
     def __init__(self):
         super().__init__()
         self.title("Doujinshi Colorization Manager")
-        self.geometry("600x600")
+        self.geometry("1200x600")
 
         self.conn = sqlite3.connect("db/tracker.db")
         self.cursor = self.conn.cursor()

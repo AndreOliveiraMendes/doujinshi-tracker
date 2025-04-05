@@ -3,7 +3,7 @@ import tkinter as tk
 from tkinter import messagebox, ttk
 import sqlite3
 import os
-import shutil
+from .utility import *
 
 class DoujinshiViewScreen(tk.Frame):
     def __init__(self, parent, controller, cursor, conn):
@@ -11,103 +11,19 @@ class DoujinshiViewScreen(tk.Frame):
         self.controller = controller  # Store controller for navigation
         self.cursor = cursor
         self.conn = conn
-        tk.Label(self, text="View Doujinshi", font=("Arial", 14)).pack(pady=10)
+        conf = {"code":{"name":"code", "width":60},
+        "series_id":{"name":"Series ID", "width":40},
+        "part_id":{"name":"Part ID", "width":40},
+        "series_name":{"name":"Series Name", "width":150},
+        "series_alt_name":{"name":"Series Name*", "width":150},
+        "part_name":{"name":"Chapter Name", "width":100},
+        "part_alt_name":{"name":"Chapter Name*", "width":100},
+        "origin":{"name":"Origin", "width":100},
+        "artist":{"name":"Artist", "width":100},
+        "folder_path":{"name":"Folder Path", "width":40}}
+        contruct_table_header(self, "View Doujinshi", conf)
 
-        # Define all possible columns and their display names
-        self.all_columns = ["code", "series_id", "part_id", "series_name", "series_alt_name", "part_name", "part_alt_name", "origin", "artist", "folder_path"]
-        self.column_display_names = {
-            "code": "Code",
-            "series_id": "Series ID",
-            "part_id": "Part ID",
-            "series_name": "Series Name",
-            "series_alt_name": "Series Name*",
-            "part_name": "Chapter Name",
-            "part_alt_name": "Chapter Name*",
-            "origin": "Origin",
-            "artist": "Artist",
-            "folder_path": "Folder Path"
-        }
-        self.column_widths = {
-            "code": 60,
-            "series_id": 40,
-            "part_id": 40,
-            "series_name": 150,
-            "series_alt_name": 150,
-            "part_name": 100,
-            "part_alt_name": 100,
-            "origin": 100,
-            "artist": 100,
-            "folder_path": 40
-        }
-        # Track which columns are currently visible (initially all are visible)
-        self.visible_columns = {col: tk.BooleanVar(value=True) for col in self.all_columns}
-
-        # Frame for column selection checkboxes
-        self.checkbox_frame = ttk.LabelFrame(self, text="Select Columns to Show", padding=10)
-        self.checkbox_frame.pack(fill="x", padx=5, pady=5)
-
-        # Create a checkbox for each column
-        for col in self.all_columns:
-            chk = ttk.Checkbutton(
-                self.checkbox_frame,
-                text=self.column_display_names[col],
-                variable=self.visible_columns[col],
-                command=self.update_columns
-            )
-            chk.pack(side="left", padx=5)
-
-        # Frame for the table
-        self.table_frame = ttk.Frame(self)
-        self.table_frame.pack(fill="both", expand=True, padx=5, pady=5)
-
-        # Create the Treeview table
-        self.tree = ttk.Treeview(self.table_frame, show="headings")
-        self.tree.pack(fill="both", expand=True)
-
-        # Add a scrollbar
-        scrollbar = ttk.Scrollbar(self.table_frame, orient="vertical", command=self.tree.yview)
-        self.tree.configure(yscrollcommand=scrollbar.set)
-        scrollbar.pack(side="right", fill="y")
-
-        # Initially set up the columns (all visible)
-        self.load_data()
-
-        # Buttons for actions
-        tk.Button(self, text="Edit Selected", command=self.edit_selected).pack(pady=5)
-        tk.Button(self, text="Delete Selected", command=self.delete_selected).pack(pady=5)
-        tk.Button(self, text="Back", command=controller.go_back).pack(pady=5)
-        tk.Button(self, text="Main Menu", command=controller.go_to_main_menu).pack(pady=5)
-
-    def update_columns(self):
-        # Get the currently visible columns
-        visible_cols = [col for col in self.all_columns if self.visible_columns[col].get()]
-
-        # Save the current data
-        current_data = []
-        for item in self.tree.get_children():
-            values = self.tree.item(item, "values")
-            # Map the values back to their column names
-            data_dict = {self.all_columns[i]: val for i, val in enumerate(values)}
-            current_data.append(data_dict)
-
-        # Clear the current Treeview
-        self.tree.delete(*self.tree.get_children())
-
-        # Update the columns in the Treeview
-        self.tree["columns"] = visible_cols
-        for col in visible_cols:
-            self.tree.heading(col, text=self.column_display_names[col])
-            self.tree.column(col, width=self.column_widths[col], anchor="w")
-
-        # Repopulate the data with only the visible columns
-        for data_dict in current_data:
-            # Create a tuple of values for the visible columns only
-            values = tuple(data_dict.get(col, "") for col in visible_cols)
-            self.tree.insert("", "end", values=values)
-        
-        # Refresh Data
-
-        self.load_data()
+    update_columns = contruct_table_updater()
 
     def load_data(self):
         # Fetch all data from the database

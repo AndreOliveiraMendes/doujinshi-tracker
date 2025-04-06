@@ -2,6 +2,7 @@
 import tkinter as tk
 from tkinter import messagebox, ttk
 import sqlite3
+from .utility import DinamicTable
 
 class ToolViewScreen(tk.Frame):
     def __init__(self, parent, controller, cursor, conn):
@@ -11,42 +12,48 @@ class ToolViewScreen(tk.Frame):
         self.conn = conn
         tk.Label(self, text="View Tools", font=("Arial", 14)).pack(pady=10)
 
-        self.tree = ttk.Treeview(self, columns=("Tool ID", "Tool Name", "Tool URL"), show="headings")
-        self.tree.heading("Tool ID", text="Tool ID")
-        self.tree.heading("Tool Name", text="Tool Name")
-        self.tree.heading("Tool URL", text="Tool URL")
+        # Define table configuration
+        table_config = {
+            "table_name": "color_tool",
+            "columns": ['tool_id', 'tool_name', 'tool_url'],
+            "column_display_names": {
+                'tool_id':'code',
+                'tool_name': 'Name',
+                'tool_url': 'URL'
+            },
+            "column_widths": {
+                'tool_id': 60,
+                'tool_name': 150,
+                'tool_url': 200
+            }
+        }
 
-        self.tree.column("Tool ID", width=60)
-        self.tree.column("Tool Name", width=150)
-        self.tree.column("Tool URL", width=200)
-
-        scrollbar = ttk.Scrollbar(self, orient="vertical", command=self.tree.yview)
-        self.tree.configure(yscrollcommand=scrollbar.set)
-        self.tree.pack(fill="both", expand=True, padx=5, pady=5)
-        scrollbar.pack(side="right", fill="y")
-
-        self.load_data()
+        # Create the dinamic table
+        self.dinamic_table = DinamicTable(
+            self,
+            cursor=self.cursor,
+            table_name=table_config["table_name"],
+            columns=table_config["columns"],
+            column_display_names=table_config["column_display_names"],
+            column_widths=table_config["column_widths"]
+        )
+        self.dinamic_table.pack(fill="both", expand=True)
 
         tk.Button(self, text="Edit Selected", command=self.edit_selected).pack(pady=5)
         tk.Button(self, text="Delete Selected", command=self.delete_selected).pack(pady=5)
         tk.Button(self, text="Back", command=controller.go_back).pack(pady=5)
         tk.Button(self, text="Main Menu", command=controller.go_to_main_menu).pack(pady=5)
 
-    def load_data(self):
-        for item in self.tree.get_children():
-            self.tree.delete(item)
-        self.cursor.execute("SELECT tool_id, tool_name, tool_url FROM color_tool")
-        rows = self.cursor.fetchall()
-        for row in rows:
-            self.tree.insert("", "end", values=row)
-
     def edit_selected(self):
         from .tool_modify import ToolModifyScreen  # Move import here
-        selected_item = self.tree.selection()
-        if not selected_item:
+        data = self.dinamic_table.get_selected_data()
+        if not data:
             messagebox.showerror("Error", "Please select a tool to edit!")
             return
-        tool_id = self.tree.item(selected_item)["values"][0]
+        tool_id = data.get("tool_id")
+        if not tool_id:
+            messagebox.showerror("Error", "Cannot edit: 'Code' column is hidden!")
+            return
         self.cursor.execute("SELECT * FROM color_tool WHERE tool_id = ?", (tool_id,))
         tool_data = self.cursor.fetchone()
         if tool_data:
@@ -56,11 +63,14 @@ class ToolViewScreen(tk.Frame):
     def delete_selected(self):
         from .attempt_insert import AttemptInsertScreen  # Move import here
         from .attempt_modify import AttemptModifyScreen  # Move import here
-        selected_item = self.tree.selection()
-        if not selected_item:
+        data = self.dinamic_table.get_selected_data()
+        if not data:
             messagebox.showerror("Error", "Please select a tool to delete!")
             return
-        tool_id = self.tree.item(selected_item)["values"][0]
+        tool_id = data.get("tool_id")
+        if not tool_id:
+            messagebox.showerror("Error", "Cannot delete: 'Code' column is hidden!")
+            return
         confirm = messagebox.askyesno("Confirm", f"Are you sure you want to delete tool with ID {tool_id}?")
         if confirm:
             try:

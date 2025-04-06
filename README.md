@@ -11,7 +11,7 @@ This project is a GUI application for managing doujinshi colorization projects. 
 doujinshi_manager/
 ├── db/
 |   ├── schema.sql            # Your existing schema file
-|   ├── tracker.db            # Your existing database file
+|   └── tracker.db            # Your existing database file
 |
 ├── doujinshi_collection/     # Your existing directory for doujinshi folders
 |
@@ -41,7 +41,7 @@ doujinshi_manager/
 ├── README.md
 ├── app.py                # Main application class (DoujinshiManagerApp)
 ├── database.py           # Database connection and management
-├── main.py               # Entry point to run the app
+└── main.py               # Entry point to run the app
 ```
 ## Setup Instructions
 

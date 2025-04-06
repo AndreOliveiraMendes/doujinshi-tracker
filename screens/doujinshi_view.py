@@ -21,7 +21,9 @@ class DoujinshiViewScreen(tk.Frame):
         "origin":{"name":"Origin", "width":100},
         "artist":{"name":"Artist", "width":100},
         "folder_path":{"name":"Folder Path", "width":40}}
-        contruct_table_header(self, "View Doujinshi", conf)
+        contruct_table_header(self, conf)
+    
+        tk.Label(self, text="View Doujinshi", font=("Arial", 14)).pack(pady=10)
 
     update_columns = contruct_table_updater()
 

@@ -1,8 +1,6 @@
 import tkinter as tk
 from tkinter import messagebox, ttk
-def contruct_table_header(self, tittle, conf):
-
-    tk.Label(self, text=tittle, font=("Arial", 14)).pack(pady=10)
+def contruct_table_header(self, conf):
 
     all_columns = list(conf.keys())
     column_display_names = {}

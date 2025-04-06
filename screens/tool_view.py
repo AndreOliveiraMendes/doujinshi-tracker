@@ -17,7 +17,7 @@ class ToolViewScreen(tk.Frame):
             "table_name": "color_tool",
             "columns": ['tool_id', 'tool_name', 'tool_url'],
             "column_display_names": {
-                'tool_id':'code',
+                'tool_id':'Code',
                 'tool_name': 'Name',
                 'tool_url': 'URL'
             },

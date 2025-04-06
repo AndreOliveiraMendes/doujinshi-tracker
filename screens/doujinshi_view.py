@@ -19,7 +19,7 @@ class DoujinshiViewScreen(tk.Frame):
             "table_name": "color_subject",
             "columns": ['code', 'series_id', 'part_id', 'series_name', 'series_alt_name', 'part_name', 'part_alt_name', 'origin', 'artist', 'folder_path'],
             "column_display_names": {
-                'code': 'code',
+                'code': 'Code',
                 'series_id': 'Series ID',
                 'part_id': 'Part ID',
                 'series_name':'Series Name',

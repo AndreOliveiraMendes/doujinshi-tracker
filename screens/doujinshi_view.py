@@ -11,6 +11,9 @@ class DoujinshiViewScreen(tk.Frame):
         self.controller = controller  # Store controller for navigation
         self.cursor = cursor
         self.conn = conn
+
+        tk.Label(self, text="View Doujinshi", font=("Arial", 14)).pack(pady=10)
+
         conf = {"code":{"name":"code", "width":60},
         "series_id":{"name":"Series ID", "width":40},
         "part_id":{"name":"Part ID", "width":40},
@@ -23,8 +26,6 @@ class DoujinshiViewScreen(tk.Frame):
         "folder_path":{"name":"Folder Path", "width":40}}
         contruct_table_header(self, conf)
     
-        tk.Label(self, text="View Doujinshi", font=("Arial", 14)).pack(pady=10)
-
     update_columns = contruct_table_updater()
 
     def load_data(self):

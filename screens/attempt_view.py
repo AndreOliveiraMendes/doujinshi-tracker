@@ -2,6 +2,7 @@
 import tkinter as tk
 from tkinter import messagebox, ttk
 import sqlite3
+from .utility import DinamicTable
 
 class AttemptViewScreen(tk.Frame):
     def __init__(self, parent, controller, cursor, conn):
@@ -11,47 +12,54 @@ class AttemptViewScreen(tk.Frame):
         self.conn = conn
         tk.Label(self, text="View Attempts", font=("Arial", 14)).pack(pady=10)
 
-        self.tree = ttk.Treeview(self, columns=("Code", "Tool ID", "Folder Path", "Color Status", "Notes"), show="headings")
-        self.tree.heading("Code", text="Code")
-        self.tree.heading("Tool ID", text="Tool ID")
-        self.tree.heading("Folder Path", text="Folder Path")
-        self.tree.heading("Color Status", text="Color Status")
-        self.tree.heading("Notes", text="Notes")
+        # Define table configuration
+        # Define table configuration
+        table_config = {
+            "table_name": "color_attempt",
+            "columns": ['code', 'tool_id', 'attempt_folder_path', 'attempt_color_status', 'attempt_notes'],
+            "column_display_names": {
+                'code': 'Doujinshi Code',
+                'tool_id': 'Tool Code',
+                'attempt_folder_path': 'Folder Path',
+                'attempt_color_status': 'Color Status',
+                'attempt_notes': 'Notes'
+            },
+            "column_widths": {
+                'code':60 ,
+                'tool_id':60 ,
+                'attempt_folder_path':100 ,
+                'attempt_color_status':100 ,
+                'attempt_notes':150
+            }
+        }
 
-        self.tree.column("Code", width=60)
-        self.tree.column("Tool ID", width=60)
-        self.tree.column("Folder Path", width=100)
-        self.tree.column("Color Status", width=100)
-        self.tree.column("Notes", width=150)
-
-        scrollbar = ttk.Scrollbar(self, orient="vertical", command=self.tree.yview)
-        self.tree.configure(yscrollcommand=scrollbar.set)
-        self.tree.pack(fill="both", expand=True, padx=5, pady=5)
-        scrollbar.pack(side="right", fill="y")
-
-        self.load_data()
+         # Create the dinamic table
+        self.dinamic_table = DinamicTable(
+            self,
+            cursor=self.cursor,
+            table_name=table_config["table_name"],
+            columns=table_config["columns"],
+            column_display_names=table_config["column_display_names"],
+            column_widths=table_config["column_widths"]
+        )
+        self.dinamic_table.pack(fill="both", expand=True)
 
         tk.Button(self, text="Edit Selected", command=self.edit_selected).pack(pady=5)
         tk.Button(self, text="Delete Selected", command=self.delete_selected).pack(pady=5)
         tk.Button(self, text="Back", command=controller.go_back).pack(pady=5)
         tk.Button(self, text="Main Menu", command=controller.go_to_main_menu).pack(pady=5)
 
-    def load_data(self):
-        for item in self.tree.get_children():
-            self.tree.delete(item)
-        self.cursor.execute("SELECT code, tool_id, attempt_folder_path, attempt_color_status, attempt_notes FROM color_attempt")
-        rows = self.cursor.fetchall()
-        for row in rows:
-            self.tree.insert("", "end", values=row)
-
     def edit_selected(self):
         from .attempt_modify import AttemptModifyScreen  # Move import here
-        selected_item = self.tree.selection()
-        if not selected_item:
-            messagebox.showerror("Error", "Please select an attempt to edit!")
+        data = self.dinamic_table.get_selected_data()
+        if not data:
+            messagebox.showerror("Error", "Please select a attempt to edit!")
             return
-        code = self.tree.item(selected_item)["values"][0]
-        tool_id = self.tree.item(selected_item)["values"][1]
+        code = data.get("code")
+        tool_id = data.get("tool_id")
+        if not code or not tool_id:
+            messagebox.showerror("Error", "Cannot edit: either of 'code' column are hide!")
+            return
         self.cursor.execute("SELECT * FROM color_attempt WHERE code = ? AND tool_id = ?", (code, tool_id))
         attempt_data = self.cursor.fetchone()
         if attempt_data:

@@ -67,12 +67,15 @@ class AttemptViewScreen(tk.Frame):
             self.controller.show_frame(AttemptModifyScreen)
 
     def delete_selected(self):
-        selected_item = self.tree.selection()
-        if not selected_item:
-            messagebox.showerror("Error", "Please select an attempt to delete!")
+        data = self.dinamic_table.get_selected_data()
+        if not data:
+            messagebox.showerror("Error", "Please select a attempt to edit!")
             return
-        code = self.tree.item(selected_item)["values"][0]
-        tool_id = self.tree.item(selected_item)["values"][1]
+        code = data.get("code")
+        tool_id = data.get("tool_id")
+        if not code or not tool_id:
+            messagebox.showerror("Error", "Cannot edit: either of 'code' column are hide!")
+            return
         confirm = messagebox.askyesno("Confirm", f"Are you sure you want to delete attempt for code {code} with tool ID {tool_id}?")
         if confirm:
             try:

@@ -82,7 +82,7 @@ class ToolViewScreen(tk.Frame):
 
                 self.cursor.execute("DELETE FROM color_tool WHERE tool_id = ?", (tool_id,))
                 self.conn.commit()
-                self.load_data()
+                self.dinamic_table.load_data()
                 messagebox.showinfo("Success", f"Deleted tool with ID {tool_id}")
 
                 # Refresh the tool dropdown in AttemptInsertScreen and AttemptModifyScreen

@@ -131,7 +131,7 @@ class DoujinshiInsertScreen(tk.Frame):
             # Refresh the DoujinshiViewScreen
             view_screen = self.controller.frames.get(DoujinshiViewScreen)
             if view_screen:
-                view_screen.load_data()
+                view_screen.dinamic_table.load_data()
             DirectoryMenu_screen = self.controller.frames.get(DirectoryMenu)
             if DirectoryMenu_screen:
                 DirectoryMenu_screen.load_folders()

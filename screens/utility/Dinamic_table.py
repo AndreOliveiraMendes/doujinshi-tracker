@@ -1,4 +1,4 @@
-# doujinshi_manager/widgets/dynamic_table.py
+# doujinshi_manager/screens/utility/dynamic_table.py
 import tkinter as tk
 from tkinter import ttk
 
@@ -44,8 +44,6 @@ class DinamicTable(tk.Frame):
 
         # Initially load the data
         self.load_data()
-
-        parent.load_data = self.load_data
 
     def update_columns(self):
         # Get the currently visible columns

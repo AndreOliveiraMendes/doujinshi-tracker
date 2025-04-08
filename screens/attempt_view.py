@@ -7,12 +7,11 @@ from .utility import DinamicTable
 class AttemptViewScreen(tk.Frame):
     def __init__(self, parent, controller, cursor, conn):
         super().__init__(parent)
-        self.controller = controller  # Store controller for navigation
+        self.controller = controller
         self.cursor = cursor
         self.conn = conn
         tk.Label(self, text="View Attempts", font=("Arial", 14)).pack(pady=10)
 
-        # Define table configuration
         # Define table configuration
         table_config = {
             "table_name": "color_attempt",
@@ -81,7 +80,7 @@ class AttemptViewScreen(tk.Frame):
             try:
                 self.cursor.execute("DELETE FROM color_attempt WHERE code = ? AND tool_id = ?", (code, tool_id))
                 self.conn.commit()
-                self.load_data()
+                self.dinamic_table.load_data()
                 messagebox.showinfo("Success", f"Deleted attempt for code {code} with tool ID {tool_id}")
             except sqlite3.Error as e:
                 messagebox.showerror("Error", f"Database error: {e}")

@@ -4,59 +4,73 @@ from tkinter import messagebox, ttk
 import sqlite3
 import os
 import shutil
+from .utility import DinamicTable
 
 class DoujinshiViewScreen(tk.Frame):
     def __init__(self, parent, controller, cursor, conn):
         super().__init__(parent)
-        self.controller = controller  # Store controller for navigation
+        self.controller = controller
         self.cursor = cursor
         self.conn = conn
         tk.Label(self, text="View Doujinshi", font=("Arial", 14)).pack(pady=10)
 
-        self.tree = ttk.Treeview(self, columns=("Code", "Series ID", "Part ID", "Series Name", "Origin", "Artist", "Folder Path"), show="headings")
-        self.tree.heading("Code", text="Code")
-        self.tree.heading("Series ID", text="Series ID")
-        self.tree.heading("Part ID", text="Part ID")
-        self.tree.heading("Series Name", text="Series Name")
-        self.tree.heading("Origin", text="Origin")
-        self.tree.heading("Artist", text="Artist")
-        self.tree.heading("Folder Path", text="Folder Path")
+        # Define table configuration
+        table_config = {
+            "table_name": "color_subject",
+            "columns": ['code', 'series_id', 'part_id', 'series_name', 'series_alt_name', 'part_name', 'part_alt_name', 'origin', 'artist', 'folder_path'],
+            "column_display_names": {
+                'code': 'Code',
+                'series_id': 'Series ID',
+                'part_id': 'Part ID',
+                'series_name':'Series Name',
+                'series_alt_name': 'Series Name*',
+                'part_name': 'Chapter Name',
+                'part_alt_name': 'Chapter Name*',
+                'origin': 'Origin',
+                'artist': 'Artist',
+                'folder_path': 'Folder Path'
+            },
+            "column_widths": {
+                'code': 60,
+                'series_id': 40,
+                'part_id': 40,
+                'series_name': 150,
+                'series_alt_name': 150,
+                'part_name': 100,
+                'part_alt_name': 100,
+                'origin': 100,
+                'artist': 100,
+                'folder_path': 40
+            }
+        }
 
-        self.tree.column("Code", width=60)
-        self.tree.column("Series ID", width=60)
-        self.tree.column("Part ID", width=60)
-        self.tree.column("Series Name", width=150)
-        self.tree.column("Origin", width=100)
-        self.tree.column("Artist", width=100)
-        self.tree.column("Folder Path", width=100)
+        # Create the dinamic table
+        self.dinamic_table = DinamicTable(
+            self,
+            cursor=self.cursor,
+            table_name=table_config["table_name"],
+            columns=table_config["columns"],
+            column_display_names=table_config["column_display_names"],
+            column_widths=table_config["column_widths"]
+        )
+        self.dinamic_table.pack(fill="both", expand=True)
 
-        scrollbar = ttk.Scrollbar(self, orient="vertical", command=self.tree.yview)
-        self.tree.configure(yscrollcommand=scrollbar.set)
-        self.tree.pack(fill="both", expand=True, padx=5, pady=5)
-        scrollbar.pack(side="right", fill="y")
-
-        self.load_data()
-
+        # Buttons for actions
         tk.Button(self, text="Edit Selected", command=self.edit_selected).pack(pady=5)
         tk.Button(self, text="Delete Selected", command=self.delete_selected).pack(pady=5)
         tk.Button(self, text="Back", command=controller.go_back).pack(pady=5)
         tk.Button(self, text="Main Menu", command=controller.go_to_main_menu).pack(pady=5)
 
-    def load_data(self):
-        for item in self.tree.get_children():
-            self.tree.delete(item)
-        self.cursor.execute("SELECT code, series_id, part_id, series_name, origin, artist, folder_path FROM color_subject")
-        rows = self.cursor.fetchall()
-        for row in rows:
-            self.tree.insert("", "end", values=row)
-
     def edit_selected(self):
-        from .doujinshi_modify import DoujinshiModifyScreen  # Move import here
-        selected_item = self.tree.selection()
-        if not selected_item:
+        from .doujinshi_modify import DoujinshiModifyScreen
+        data = self.dinamic_table.get_selected_data()
+        if not data:
             messagebox.showerror("Error", "Please select a doujinshi to edit!")
             return
-        code = self.tree.item(selected_item)["values"][0]
+        code = data.get("code")
+        if not code:
+            messagebox.showerror("Error", "Cannot edit: 'Code' column is hidden!")
+            return
         self.cursor.execute("SELECT * FROM color_subject WHERE code = ?", (code,))
         doujinshi_data = self.cursor.fetchone()
         if doujinshi_data:
@@ -64,11 +78,14 @@ class DoujinshiViewScreen(tk.Frame):
             self.controller.show_frame(DoujinshiModifyScreen)
 
     def delete_selected(self):
-        selected_item = self.tree.selection()
-        if not selected_item:
+        data = self.dinamic_table.get_selected_data()
+        if not data:
             messagebox.showerror("Error", "Please select a doujinshi to delete!")
             return
-        code = self.tree.item(selected_item)["values"][0]
+        code = data.get("code")
+        if not code:
+            messagebox.showerror("Error", "Cannot delete: 'Code' column is hidden!")
+            return
         confirm = messagebox.askyesno("Confirm", f"Are you sure you want to delete doujinshi with code {code}?")
         if confirm:
             try:
@@ -85,7 +102,7 @@ class DoujinshiViewScreen(tk.Frame):
                             messagebox.showwarning("Warning", f"Failed to delete directory {full_path}: {e}")
                 self.cursor.execute("DELETE FROM color_subject WHERE code = ?", (code,))
                 self.conn.commit()
-                self.load_data()
+                self.dinamic_table.load_data()
                 messagebox.showinfo("Success", f"Deleted doujinshi with code {code}")
             except sqlite3.Error as e:
                 messagebox.showerror("Error", f"Database error: {e}")

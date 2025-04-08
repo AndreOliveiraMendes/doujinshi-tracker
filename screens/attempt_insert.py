@@ -131,7 +131,7 @@ class AttemptInsertScreen(tk.Frame):
             # Reflesh screen
             AttemptView_screen = self.controller.frames.get(AttemptViewScreen)
             if AttemptView_screen:
-                AttemptView_screen.load_data()
+                AttemptView_screen.dinamic_table.load_data()
 
             # optional, go to AttemptViewScreen
             self.controller.show_frame(AttemptViewScreen)

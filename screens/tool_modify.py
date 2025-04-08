@@ -122,7 +122,7 @@ class ToolModifyScreen(tk.Frame):
             # Refresh the ToolViewScreen
             view_screen = self.controller.frames.get(ToolViewScreen)
             if view_screen:
-                view_screen.load_data()
+                view_screen.dinamic_table.load_data()
 
             # Refresh the tool dropdown in AttemptInsertScreen and AttemptModifyScreen
             for screen_class in (AttemptInsertScreen, AttemptModifyScreen):

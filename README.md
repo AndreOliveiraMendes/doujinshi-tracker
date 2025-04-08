@@ -9,31 +9,36 @@ This project is a GUI application for managing doujinshi colorization projects. 
 ## Project Structure
 ```
 doujinshi_manager/
-│
 ├── db/
-│   ├── tracker.db        # Your existing database file
-│   └── schema.sql        # Your existing schema file
-│
-├── doujinshi_collection/ # Your existing directory for doujinshi folders
-│
-├── screens/              # Directory for all screen classes
-│   ├── __init__.py
-│   ├── main_menu.py
-│   ├── database_menu.py
-│   ├── directory_menu.py
-│   ├── doujinshi_menu.py
-│   ├── doujinshi_view.py
-│   ├── doujinshi_insert.py
-│   ├── doujinshi_modify.py
-│   ├── attempt_menu.py
-│   ├── attempt_view.py
-│   ├── attempt_insert.py
-│   ├── attempt_modify.py
-│   ├── tool_menu.py
-│   ├── tool_view.py
-│   ├── tool_insert.py
-│   └── tool_modify.py
-│
+|   ├── schema.sql            # Your existing schema file
+|   └── tracker.db            # Your existing database file
+|
+├── doujinshi_collection/     # Your existing directory for doujinshi folders
+|
+├── screens/                  # Directory for all screen classes
+|   ├── utility/              # Utility function for screen classes
+|   |   ├── Dinamic_table.py
+|   |   └── __init__.py
+|   |
+|   ├── __init__.py
+|   ├── attempt_insert.py
+|   ├── attempt_menu.py
+|   ├── attempt_modify.py
+|   ├── attempt_view.py
+|   ├── database_menu.py
+|   ├── directory_menu.py
+|   ├── doujinshi_insert.py
+|   ├── doujinshi_menu.py
+|   ├── doujinshi_modify.py
+|   ├── doujinshi_view.py
+|   ├── main_menu.py
+|   ├── tool_insert.py
+|   ├── tool_menu.py
+|   ├── tool_modify.py
+|   └── tool_view.py
+|
+├── .gitignore
+├── README.md
 ├── app.py                # Main application class (DoujinshiManagerApp)
 ├── database.py           # Database connection and management
 └── main.py               # Entry point to run the app

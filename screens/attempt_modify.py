@@ -165,7 +165,7 @@ class AttemptModifyScreen(tk.Frame):
             # Refresh the AttemptViewScreen
             view_screen = self.controller.frames.get(AttemptViewScreen)
             if view_screen:
-                view_screen.load_data()
+                view_screen.dinamic_table.load_data()
 
             # Navigate back to the view screen
             self.controller.show_frame(AttemptViewScreen)

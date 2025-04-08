@@ -176,7 +176,7 @@ class DoujinshiModifyScreen(tk.Frame):
             # Refresh the DoujinshiViewScreen
             view_screen = self.controller.frames.get(DoujinshiViewScreen)
             if view_screen:
-                view_screen.load_data()
+                view_screen.dinamic_table.load_data()
 
             # Navigate back to the view screen
             self.controller.show_frame(DoujinshiViewScreen)

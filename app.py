@@ -16,6 +16,7 @@ from screens.doujinshi_menu import DoujinshiMenu
 from screens.doujinshi_insert import DoujinshiInsertScreen
 from screens.doujinshi_modify import DoujinshiModifyScreen
 from screens.doujinshi_view import DoujinshiViewScreen
+from database import Database
 
 class DoujinshiManagerApp(tk.Tk):
     def __init__(self):
@@ -23,8 +24,9 @@ class DoujinshiManagerApp(tk.Tk):
         self.title("Doujinshi Colorization Manager")
         self.geometry("1200x600")
 
-        self.conn = sqlite3.connect("db/tracker.db")
-        self.cursor = self.conn.cursor()
+        self.db = Database()
+        self.conn = self.db.conn
+        self.cursor = self.db.cursor
 
         container = tk.Frame(self)
         container.pack(side="top", fill="both", expand=True)

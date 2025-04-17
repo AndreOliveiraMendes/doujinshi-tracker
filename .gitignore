@@ -3,3 +3,5 @@ doujinshi_collection/*
 db/tracker.db
 db/tracker.sqbpro
 __pycache__/
+#external utils
+ext_utils/

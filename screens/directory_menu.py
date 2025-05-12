@@ -3,6 +3,7 @@ import tkinter as tk
 from tkinter import ttk, messagebox, simpledialog
 import os
 import shutil
+import sqlite3
 
 class DirectoryMenu(tk.Frame):
     def __init__(self, parent, controller, cursor, conn):

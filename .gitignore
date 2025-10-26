@@ -5,3 +5,4 @@ db/tracker.sqbpro
 __pycache__/
 #external utils
 ext_utils/
+.venv
